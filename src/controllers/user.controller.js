@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/APiError.js"
 import {User} from "../models/user.model.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {deletefromCloudinary, uploadOnCloudinary} from "../utils/cloudinary.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 
@@ -280,6 +280,7 @@ const updateAccounDetails = asyncHandler(async(req,res)=>{
         new ApiResponse(200, "Account details updates successfully")
     )
 })
+// const deleteAvatar = asyncHandler(async(req,res)) complete later on 
 const updateUserAvatar = asyncHandler(async(req,res)=>{
     const avatarLocalPath = req.file?.path
 
@@ -293,7 +294,14 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Error while uploading the avatar ")
     }
 
-    const user  = await User.findByIdAndUpdate(
+    const user = await User.findById(req.user?._id).select("avatar")
+
+    if (!user) {
+        throw new ApiError(400, "Not able to find the old avatar")    
+    }
+    const oldAvatarUrl = user.avatar;
+    
+    const updatedUser  = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set:{
@@ -302,13 +310,17 @@ const updateUserAvatar = asyncHandler(async(req,res)=>{
         },{new: true}
     ).select("-password")
 
-    if (!user) {
+    if (!updatedUser) {
         throw new ApiError(400, "The user was not found")
+    }
+
+    if (oldAvatarUrl) {
+        await deletefromCloudinary(oldAvatarUrl)
     }
 
     return res
     .status(200)
-    .json(new ApiResponse(200, "The Avatar has been changed successfully"))
+    .json(new ApiResponse(200, "The Avatar has been changed successfully", updatedUser))
 })
 const updateUserCoverImage = asyncHandler(async(req,res)=>{
     const coverImageLocalPath = req.file?.path
