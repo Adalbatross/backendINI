@@ -166,7 +166,7 @@ const logoutUser  = asyncHandler(async(req,res)=>{
     await User.findByIdAndUpdate(
         req.user._id,{
             $unset:{
-                refeshToken: 1
+                refreshToken: 1
             }
         },
         {
@@ -187,7 +187,7 @@ const logoutUser  = asyncHandler(async(req,res)=>{
 })
 
 const refreshAccessToken  = asyncHandler(async (req, res)=>{
-    const incomingRefreshToken = req.cookies.refeshToken || req.body.refeshToken
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
     
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Unauthorized request")
@@ -233,8 +233,8 @@ const refreshAccessToken  = asyncHandler(async (req, res)=>{
 
 const changeCurrentPassword = asyncHandler(async(req,res)=>{
     const {oldPassword, newPassword, confPassword} = req.body
-    if (!(  newPassword === confPassword)) {
-        throw new ApiError(401, "The password did'nt match the password")
+    if (!(newPassword === confPassword)) {
+        throw new ApiError(401, "The passwords didn't match")
     }
     const user = await User.findById(req.user?._id)
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
@@ -252,7 +252,7 @@ const changeCurrentPassword = asyncHandler(async(req,res)=>{
 
 const getCurrentUser = asyncHandler(async(req,res)=>{
     return res.status(200)
-    .json(200, req.user, "Current user fetched successfully")
+    .json(new ApiResponse(200, req.user, "Current user fetched successfully"))
 })
 
 const updateAccountDetails = asyncHandler(async(req,res)=>{
@@ -262,7 +262,7 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "All fields are required")
     }
 
-    const user = await  User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -271,13 +271,12 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
             }
         },
         {new: true}
-
     ).select("-password")
 
     return res
     .status(200)
     .json(
-        new ApiResponse(200, "Account details updates successfully")
+        new ApiResponse(200, user, "Account details updated successfully")
     )
 })
 
